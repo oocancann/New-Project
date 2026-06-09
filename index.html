@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>BP Tracker — ทีม</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<!-- ============================================================
+     🔧 ตั้งค่า Firebase — แก้ไขบรรทัดนี้บรรทัดเดียว!
+     วาง URL Realtime Database ของคุณแทน YOUR_FIREBASE_URL
+     ตัวอย่าง: https://my-project-default-rtdb.firebaseio.com
+     ============================================================ -->
+<script>
+  const FIREBASE_URL = "https://codeveronica-471c7-default-rtdb.asia-southeast1.firebasedatabase.app";
+</script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F6FB;
+  --surface:#FFFFFF;
+  --border:#E2E8F0;
+  --border-soft:#EEF2F7;
+  --text:#0F172A;
+  --muted:#64748B;
+  --light:#B8C4D4;
+  --primary:#2563EB;
+  --primary-d:#1D4ED8;
+  --primary-soft:#EEF4FF;
+  --success:#059669;
+  --warn:#D97706;
+  --danger:#DC2626;
+  --r:16px;--rs:10px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0D1117;--surface:#161B22;--border:#21262D;--border-soft:#1A1F27;
+  --text:#E6EDF3;--muted:#8B949E;--light:#3D444D;
+  --primary:#4493F8;--primary-d:#2563EB;--primary-soft:#1A2744;
+}}
+
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);font-size:15px;min-height:100vh;padding-bottom:84px}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.topbar-logo{font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+.topbar-logo .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#2563EB,#7C3AED);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.topbar-logo .logo-icon svg{width:18px;height:18px;stroke:#fff}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.online-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--muted);background:var(--border-soft);border:1px solid var(--border);border-radius:999px;padding:4px 10px;letter-spacing:.1px}
+.online-dot{width:6px;height:6px;border-radius:50%;background:#94A3B8;flex-shrink:0;transition:all .4s}
+.online-dot.live{background:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.2)}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--border-soft);border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 3px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:-.1px}
+.user-chip:hover{background:var(--border);border-color:var(--light)}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* BOTTOM NAV */
+.botnav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(10px)}
+.botnav button{flex:1;background:none;border:none;padding:9px 0 7px;font-size:10px;font-weight:500;color:var(--muted);cursor:pointer;font-family:'Sarabun',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s;letter-spacing:.2px}
+.botnav button svg{width:21px;height:21px;stroke-width:1.7}
+.botnav button.on{color:var(--primary)}
+.botnav button.on svg{stroke-width:2.2}
+
+/* LAYOUT */
+.page{display:none;max-width:580px;margin:0 auto;padding:16px}
+.page.on{display:block;animation:slidein .2s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text);letter-spacing:-.2px}
+.section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* FORM */
+.lbl{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;display:block;letter-spacing:.1px}
+.inp{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);transition:border-color .15s,box-shadow .15s}
+.inp:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+select.inp{cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* NUMBER INPUT */
+.numblock{display:flex;flex-direction:column;gap:5px}
+.numrow{display:flex;align-items:center;gap:4px}
+.pm{width:36px;height:40px;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s;font-weight:400}
+.pm:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+.pm:active{transform:scale(.93)}
+.nin{width:68px;height:40px;text-align:center;font-size:22px;font-weight:500;font-family:'IBM Plex Mono',monospace;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--text);-moz-appearance:textfield;transition:border-color .15s}
+.nin::-webkit-outer-spin-button,.nin::-webkit-inner-spin-button{-webkit-appearance:none}
+.nin:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.divider-slash{font-size:24px;color:var(--light);padding:0 2px;line-height:40px;margin-top:20px}
+
+/* BP STATUS BAR */
+.sbar{border-radius:var(--rs);padding:10px 14px;margin:12px 0;font-size:13px;font-weight:600;display:none;align-items:center;gap:8px;border:1px solid transparent}
+
+/* SAVE BUTTON */
+.btnprimary{width:100%;padding:13px;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .15s;letter-spacing:-.1px;box-shadow:0 2px 8px rgba(37,99,235,.3)}
+.btnprimary:hover{box-shadow:0 4px 16px rgba(37,99,235,.4);transform:translateY(-1px)}
+.btnprimary:active{transform:scale(.98);box-shadow:0 1px 4px rgba(37,99,235,.3)}
+.btnprimary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.1px}
+.ok{background:#D1FAE5;color:#065F46}.elv{background:#FEF3C7;color:#92400E}
+.h1{background:#FED7AA;color:#7C2D12}.h2{background:#FEE2E2;color:#7F1D1D}.lo{background:#DBEAFE;color:#1E3A8A}
+@media(prefers-color-scheme:dark){
+  .ok{background:#0A2E1E;color:#6EE7B7}.elv{background:#2D1E00;color:#FCD34D}
+  .h1{background:#2D0F00;color:#FCA572}.h2{background:#2D0000;color:#FCA5A5}.lo{background:#0F1E3A;color:#93C5FD}
+}
+
+/* LATEST CARD */
+.latest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.bigbp{display:flex;align-items:baseline;gap:4px}
+.bigbp .n{font-size:44px;font-weight:300;font-family:'IBM Plex Mono',monospace;line-height:1;letter-spacing:-2px}
+.bigbp .sl{font-size:28px;color:var(--light);margin:0 2px;font-weight:300}
+.bigbp .u{font-size:12px;color:var(--muted);align-self:flex-end;margin-bottom:6px;font-weight:500}
+.bp-meta{font-size:12px;color:var(--muted);margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bp-meta-item{display:flex;align-items:center;gap:3px}
+
+/* CHART */
+.chartbox{position:relative;width:100%;height:220px;margin-top:12px}
+.legend{display:flex;gap:16px;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:8px;flex-wrap:wrap}
+.legsq{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
+
+/* STATS GRID */
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.statcard{background:var(--bg);border:1px solid var(--border-soft);border-radius:12px;padding:12px 14px}
+.statcard .slbl{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.statcard .v{font-size:24px;font-weight:400;font-family:'IBM Plex Mono',monospace;letter-spacing:-1px}
+.statcard .u{font-size:11px;color:var(--light);margin-top:2px}
+
+/* HISTORY */
+.hrow{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-soft)}
+.hrow:last-child{border:none}
+.hrow-left{flex:1;min-width:0}
+.hrow-vals{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.hrow-bp{font-size:17px;font-weight:500;font-family:'IBM Plex Mono',monospace;letter-spacing:-.5px}
+.hrow-meta{font-size:12px;color:var(--muted)}
+.delbtn{background:none;border:none;cursor:pointer;color:var(--light);padding:4px 6px;border-radius:6px;transition:all .15s;flex-shrink:0;margin-top:1px}
+.delbtn:hover{color:var(--danger);background:rgba(220,38,38,.08)}
+.member-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
+.member-av{width:14px;height:14px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* TEAM PAGE */
+.team-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-soft)}
+.team-row:last-child{border:none}
+.team-av-lg{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.team-info{flex:1}
+.team-name{font-weight:700;font-size:14px;letter-spacing:-.2px;margin-bottom:3px}
+.team-bp{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.team-count{font-size:11px;color:var(--light);margin-top:3px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:3rem 0;color:var(--light);font-size:14px}
+.empty .ico{font-size:40px;display:block;margin-bottom:10px;opacity:.4}
+
+/* NAME / WELCOME SCREEN */
+.namescreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.namebox{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.2rem 1.8rem;width:100%;max-width:360px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.08)}
+.namebox-icon{width:64px;height:64px;background:linear-gradient(135deg,#2563EB,#7C3AED);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 4px 16px rgba(37,99,235,.3)}
+.namebox-icon svg{width:32px;height:32px;stroke:#fff;stroke-width:1.8}
+.namebox h1{font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:-.4px}
+.namebox .sub{font-size:14px;color:var(--muted);margin-bottom:6px}
+.namebox .hint{font-size:12px;color:var(--light);margin-top:14px}
+.name-input-wrap{position:relative;margin:16px 0 10px}
+.name-input-wrap .inp{text-align:center;font-size:16px;padding:12px 16px;font-weight:500}
+
+/* FILTER ROW */
+.frow-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.frow-top .card-title{margin:0}
+.filter-sel{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:border-color .15s}
+.filter-sel:focus{outline:none;border-color:var(--primary)}
+
+/* SAVE MSG */
+.savemsg{text-align:center;font-size:13px;font-weight:500;margin-top:10px;min-height:20px}
+.saving-spinner{display:inline-block;width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
+
+/* TREND SUMMARY */
+.tsrow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-soft)}
+.tsrow:last-child{border:none}
+.ts-label{font-size:12px;color:var(--muted);font-weight:500}
+.ts-val{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;font-family:"IBM Plex Mono",monospace}
+.ts-arrow{font-size:15px;line-height:1}
+.ts-up{color:var(--danger)}
+.ts-dn{color:var(--success)}
+.ts-eq{color:var(--muted)}
+.ts-header{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.ts-score{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;margin-bottom:10px}
+.ts-score-icon{font-size:22px;line-height:1}
+.ts-score-text{flex:1}
+.ts-score-title{font-size:13px;font-weight:700;margin-bottom:1px}
+.ts-score-sub{font-size:12px;color:var(--muted)}
+
+/* FIELD BADGE — inline status per input */
+.field-badge{display:none;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:4px;letter-spacing:.1px}
+.numblock-wrap{display:flex;flex-direction:column;gap:0}
+
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(16,185,129,.4)}70%{box-shadow:0 0 0 5px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.online-dot.live{animation:pulse-ring 2s infinite}
+</style>
+</head>
+<body>
+
+<!-- NAME SCREEN -->
+<div id="namescreen" class="namescreen">
+  <div class="namebox">
+    <div class="namebox-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </div>
+    <h1>BP Tracker</h1>
+    <p class="sub">ติดตามความดันโลหิตของทีม</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:0">ใส่ชื่อเพื่อเริ่มบันทึก — ทุกคนในทีมจะเห็นข้อมูลร่วมกัน</p>
+    <div class="name-input-wrap">
+      <input id="nameinp" class="inp" type="text" placeholder="ชื่อ หรือชื่อเล่น" maxlength="20"/>
+    </div>
+    <button class="btnprimary" onclick="startApp()">เริ่มใช้งาน →</button>
+    <p class="hint">🔒 ข้อมูลเก็บใน Firebase · แชร์กันในทีม</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      BP Tracker
+    </div>
+    <div class="topbar-right">
+      <div class="online-pill">
+        <div class="online-dot" id="online-dot"></div>
+        <span id="online-txt">กำลังเชื่อมต่อ</span>
+      </div>
+      <div class="user-chip" onclick="changeName()">
+        <div id="hav" class="av"></div>
+        <span id="hname"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div id="pg-rec" class="page on">
+    <div class="card">
+      <div class="card-title">บันทึกความดัน</div>
+
+      <!-- BP Numbers -->
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="numblock">
+          <span class="lbl">ค่าบน (Systolic)</span>
+          <div class="numrow">
+            <button class="pm" onclick="adj('sys',-1)">−</button>
+            <input class="nin" type="number" id="sys" placeholder="120" oninput="updSbar()"/>
+            <button class="pm" onclick="adj('sys',1)">+</button>
+          </div>
+          <span id="sys-badge" class="field-badge"></span>
+        </div>
+        <span class="divider-slash">/</span>
+        <div class="numblock">
+          <span class="lbl">ค่าล่าง (Diastolic)</span>
+          <div class="numrow">
+            <button class="pm" onclick="adj('dia',-1)">−</button>
+            <input class="nin" type="number" id="dia" placeholder="80" oninput="updSbar()"/>
+            <button class="pm" onclick="adj('dia',1)">+</button>
+          </div>
+          <span id="dia-badge" class="field-badge"></span>
+        </div>
+        <div class="numblock">
+          <span class="lbl">ชีพจร (bpm)</span>
+          <div class="numrow">
+            <button class="pm" onclick="adj('pls',-1)">−</button>
+            <input class="nin" type="number" id="pls" placeholder="72" oninput="updSbar()"/>
+            <button class="pm" onclick="adj('pls',1)">+</button>
+          </div>
+          <span id="pls-badge" class="field-badge"></span>
+        </div>
+      </div>
+
+      <div id="sbar" class="sbar"></div>
+
+      <div class="row2" style="margin-bottom:12px">
+        <div>
+          <span class="lbl">วันที่</span>
+          <input class="inp" type="date" id="dt"/>
+        </div>
+        <div>
+          <span class="lbl">ช่วงเวลา</span>
+          <select class="inp" id="per">
+            <option value="m">🌅 เช้า</option>
+            <option value="a">☀️ บ่าย</option>
+            <option value="e">🌇 เย็น</option>
+            <option value="n">🌙 กลางคืน</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <span class="lbl">หมายเหตุ (ไม่บังคับ)</span>
+        <input class="inp" type="text" id="note" placeholder="เช่น หลังออกกำลังกาย, ก่อนนอน…"/>
+      </div>
+      <button class="btnprimary" id="savebtn" onclick="saveRec()">บันทึก</button>
+      <p class="savemsg" id="savemsg"></p>
+    </div>
+
+    <div class="card" id="latestcard" style="display:none">
+      <div class="latest-header">
+        <span class="card-title" style="margin:0">ค่าล่าสุดของฉัน</span>
+      </div>
+      <div id="latestbody"></div>
+      <div id="trendsummary" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft)"></div>
+    </div>
+  </div>
+
+  <div id="pg-trend" class="page">
+    <div class="card">
+      <div class="frow-top">
+        <span class="card-title">แนวโน้มของฉัน</span>
+        <select class="filter-sel" id="tdays" onchange="renderTrend()">
+          <option value="7">7 วัน</option>
+          <option value="14">14 วัน</option>
+          <option value="30" selected>30 วัน</option>
+          <option value="all">ทั้งหมด</option>
+        </select>
+      </div>
+      <div class="chartbox" style="height:240px">
+        <canvas id="tChart"></canvas>
+        <div id="tempty" class="empty" style="display:none"><span class="ico">📈</span>ยังไม่มีข้อมูลเพียงพอ<br><span style="font-size:12px">บันทึกอย่างน้อย 2 ครั้งเพื่อดูกราฟ</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">สถิติ</div>
+      <div class="statgrid" id="statgrid"></div>
+    </div>
+  </div>
+
+  <div id="pg-hist" class="page">
+    <div class="card">
+      <div class="frow-top">
+        <span class="card-title">ประวัติ</span>
+        <select class="filter-sel" id="hist-filter" onchange="renderHist()">
+          <option value="me">ของฉัน</option>
+          <option value="all">ทีมทั้งหมด</option>
+        </select>
+      </div>
+      <div id="histlist"></div>
+      <div id="histempty" class="empty" style="display:none"><span class="ico">📋</span>ยังไม่มีรายการ</div>
+    </div>
+  </div>
+
+  <div id="pg-team" class="page">
+    <div class="card">
+      <div class="card-title">สมาชิกในทีม</div>
+      <div id="teamlist"><div class="empty"><span class="ico">👥</span>กำลังโหลด...</div></div>
+    </div>
+  </div>
+
+  <nav class="botnav">
+    <button class="on" onclick="goPage('rec',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      บันทึก
+    </button>
+    <button onclick="goPage('trend',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      แนวโน้ม
+    </button>
+    <button onclick="goPage('hist',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      ประวัติ
+    </button>
+    <button onclick="goPage('team',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      ทีม
+    </button>
+  </nav>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ============================================================
+// CONFIG CHECK
+// ============================================================
+const FB_OK = FIREBASE_URL && FIREBASE_URL !== "YOUR_FIREBASE_URL";
+
+// ============================================================
+// HELPERS
+// ============================================================
+const PL = {m:'เช้า',a:'บ่าย',e:'เย็น',n:'กลางคืน'};
+const COLORS = ['#2563EB','#DC2626','#059669','#D97706','#7C3AED','#0891B2','#BE185D'];
+function initials(n){return n.slice(0,2).toUpperCase()}
+function colorFor(n){let h=0;for(let c of n)h=(h*31+c.charCodeAt(0))%COLORS.length;return COLORS[h]}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function avg(arr){return arr.length?Math.round(arr.reduce((a,b)=>a+b,0)/arr.length):0}
+
+function bpSt(s,d){
+  if(s<90||d<60)return{cls:'lo',label:'ต่ำ',bar:'background:#DBEAFE;color:#1E3A8A'};
+  if(s<120&&d<80)return{cls:'ok',label:'ปกติ',bar:'background:#D1FAE5;color:#065F46'};
+  if(s<130&&d<80)return{cls:'elv',label:'สูงขึ้นนิด',bar:'background:#FEF3C7;color:#92400E'};
+  if(s<140||d<90)return{cls:'h1',label:'สูง ระดับ 1',bar:'background:#FED7AA;color:#7C2D12'};
+  return{cls:'h2',label:'สูง ระดับ 2',bar:'background:#FEE2E2;color:#7F1D1D'};
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let me = '';
+let allRecs = []; // [{...rec, owner: name}]
+let tC = null;
+
+// ============================================================
+// FIREBASE REST API
+// ============================================================
+async function fbGet(path){
+  if(!FB_OK)return null;
+  const r = await fetch(`${FIREBASE_URL}/${path}.json`);
+  return r.ok ? r.json() : null;
+}
+
+async function fbPush(path, data){
+  if(!FB_OK)return null;
+  const r = await fetch(`${FIREBASE_URL}/${path}.json`, {
+    method:'POST',
+    body:JSON.stringify(data)
+  });
+  return r.ok ? r.json() : null;
+}
+
+async function fbDelete(path){
+  if(!FB_OK)return;
+  await fetch(`${FIREBASE_URL}/${path}.json`, {method:'DELETE'});
+}
+
+async function fbSet(path, data){
+  if(!FB_OK)return;
+  await fetch(`${FIREBASE_URL}/${path}.json`, {
+    method:'PUT',
+    body:JSON.stringify(data)
+  });
+}
+
+// ============================================================
+// REALTIME POLLING
+// ============================================================
+let pollTimer = null;
+function startPolling(){
+  loadAllRecs();
+  pollTimer = setInterval(loadAllRecs, 5000); // refresh ทุก 5 วินาที
+}
+
+async function loadAllRecs(){
+  if(!FB_OK){
+    document.getElementById('online-dot').className='online-dot';
+    document.getElementById('online-txt').textContent='ไม่ได้ตั้งค่า';
+    return;
+  }
+  try{
+    const data = await fbGet('records');
+    document.getElementById('online-dot').className='online-dot live';
+    document.getElementById('online-txt').textContent='ออนไลน์';
+    allRecs = [];
+    if(data){
+      for(const [key, rec] of Object.entries(data)){
+        allRecs.push({...rec, _key:key});
+      }
+      allRecs.sort((a,b)=>a.ts-b.ts);
+    }
+    renderLatest();
+    // Re-render current page if needed
+    const activePage = document.querySelector('.page.on');
+    if(activePage){
+      const pg = activePage.id.replace('pg-','');
+      if(pg==='trend')renderTrend();
+      if(pg==='hist')renderHist();
+      if(pg==='team')renderTeam();
+    }
+  }catch(e){
+    document.getElementById('online-dot').className='online-dot';
+    document.getElementById('online-txt').textContent='ออฟไลน์';
+  }
+}
+
+function myRecs(){return allRecs.filter(r=>r.owner===me)}
+
+// ============================================================
+// APP LIFECYCLE
+// ============================================================
+function startApp(){
+  const n = document.getElementById('nameinp').value.trim();
+  if(!n)return;
+  me = n;
+  localStorage.setItem('bp_lastuser', me);
+  document.getElementById('namescreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('hav').textContent=initials(me);
+  document.getElementById('hav').style.background=colorFor(me);
+  document.getElementById('hname').textContent=me;
+  document.getElementById('dt').value=todayStr();
+  const h=new Date().getHours();
+  document.getElementById('per').value=h<12?'m':h<17?'a':h<21?'e':'n';
+
+  // Firebase configured — no banner needed
+  if(FB_OK) fbSet(`members/${btoa(me)}`, {name:me, joined: Date.now()});
+
+  startPolling();
+}
+
+function changeName(){
+  if(pollTimer)clearInterval(pollTimer);
+  document.getElementById('app').style.display='none';
+  document.getElementById('namescreen').style.display='flex';
+  document.getElementById('nameinp').value='';
+}
+
+function goPage(pg,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.botnav button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+pg).classList.add('on');
+  btn.classList.add('on');
+  if(pg==='trend')renderTrend();
+  if(pg==='hist')renderHist();
+  if(pg==='team')renderTeam();
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+function adj(id,d){
+  const el=document.getElementById(id);
+  el.value=(parseInt(el.value)||0)+d;
+  updSbar();
+}
+
+// เกณฑ์ทางการแพทย์ (AHA/ESC guidelines)
+function sysSt(s){
+  if(isNaN(s)||s<=0) return null;
+  if(s<90)  return{cls:'lo', icon:'↓', label:'ต่ำ'};
+  if(s<=119) return{cls:'ok', icon:'✓', label:'ปกติ'};
+  if(s<=129) return{cls:'elv',icon:'↑', label:'สูงขึ้นนิด'};
+  if(s<=139) return{cls:'h1', icon:'↑', label:'สูง ระดับ 1'};
+  return              {cls:'h2', icon:'↑↑',label:'สูง ระดับ 2'};
+}
+function diaSt(d){
+  if(isNaN(d)||d<=0) return null;
+  if(d<60)  return{cls:'lo', icon:'↓', label:'ต่ำ'};
+  if(d<=79) return{cls:'ok', icon:'✓', label:'ปกติ'};
+  if(d<=89) return{cls:'h1', icon:'↑', label:'สูง ระดับ 1'};
+  return            {cls:'h2', icon:'↑↑',label:'สูง ระดับ 2'};
+}
+function plsSt(p){
+  if(isNaN(p)||p<=0) return null;
+  if(p<60)  return{cls:'lo', icon:'↓', label:'ต่ำกว่าปกติ'};
+  if(p<=100)return{cls:'ok', icon:'✓', label:'ปกติ'};
+  if(p<=120)return{cls:'elv',icon:'↑', label:'สูงขึ้น'};
+  return            {cls:'h2', icon:'↑↑',label:'เร็วผิดปกติ'};
+}
+
+function setFieldBadge(fieldId, badgeId, st){
+  const el = document.getElementById(fieldId);
+  const badge = document.getElementById(badgeId);
+  if(!st){badge.style.display='none';el.style.borderColor='';return}
+  const colors={ok:'var(--success)',lo:'#2563EB',elv:'var(--warn)',h1:'#F97316',h2:'var(--danger)'};
+  badge.style.display='inline-flex';
+  badge.className='field-badge badge '+st.cls;
+  badge.textContent=st.icon+' '+st.label;
+  el.style.borderColor=colors[st.cls]||'';
+}
+
+function updSbar(){
+  const s=parseInt(document.getElementById('sys').value);
+  const d=parseInt(document.getElementById('dia').value);
+  const p=parseInt(document.getElementById('pls').value);
+
+  setFieldBadge('sys','sys-badge',sysSt(s));
+  setFieldBadge('dia','dia-badge',diaSt(d));
+  setFieldBadge('pls','pls-badge',plsSt(p));
+
+  // Overall status bar
+  const bar=document.getElementById('sbar');
+  if(isNaN(s)||isNaN(d)||s<=0||d<=0){bar.style.display='none';return}
+  const st=bpSt(s,d);
+  bar.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:600;margin:12px 0;border:1px solid transparent;'+st.bar;
+  bar.innerHTML=`<span style="font-size:16px">${st.cls==='ok'?'✅':st.cls==='lo'?'💙':st.cls==='elv'?'⚠️':'🔴'}</span><span>ภาพรวม: ${st.label}</span>`;
+}
+
+// ============================================================
+// SAVE
+// ============================================================
+async function saveRec(){
+  const s=parseInt(document.getElementById('sys').value);
+  const d=parseInt(document.getElementById('dia').value);
+  const p=parseInt(document.getElementById('pls').value)||null;
+  const dt=document.getElementById('dt').value;
+  const per=document.getElementById('per').value;
+  const note=document.getElementById('note').value.trim()||null;
+  const msg=document.getElementById('savemsg');
+  const btn=document.getElementById('savebtn');
+
+  if(isNaN(s)||isNaN(d)||!dt){
+    msg.style.color='var(--danger)';msg.textContent='⚠ กรุณากรอกค่าความดันและวันที่';return;
+  }
+
+  const rec={sys:s,dia:d,pulse:p,date:dt,period:per,note,ts:new Date(dt+'T12:00').getTime(),owner:me,saved:Date.now()};
+
+  btn.disabled=true;
+  msg.innerHTML='<span class="saving-spinner"></span>กำลังบันทึก...';
+  msg.style.color='var(--muted)';
+
+  if(FB_OK){
+    await fbPush('records', rec);
+    await loadAllRecs();
+    msg.style.color='var(--success)';msg.textContent='✓ บันทึกเรียบร้อยแล้ว';
+  } else {
+    // offline fallback: save locally
+    allRecs.push({...rec, _key:'local_'+Date.now()});
+    allRecs.sort((a,b)=>a.ts-b.ts);
+    msg.style.color='var(--warn)';msg.textContent='⚠ บันทึกเฉพาะในเครื่อง (ยังไม่ได้ตั้งค่า Firebase)';
+  }
+
+  ['sys','dia','pls','note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sbar').style.display='none';
+  btn.disabled=false;
+  renderLatest();
+  setTimeout(()=>msg.textContent='',3000);
+}
+
+// ============================================================
+// RENDER LATEST
+// ============================================================
+function renderLatest(){
+  const card=document.getElementById('latestcard');
+  const mine=myRecs();
+  if(!mine.length){card.style.display='none';return}
+  card.style.display='block';
+  const r=mine[mine.length-1];
+  const st=bpSt(r.sys,r.dia);
+  document.getElementById('latestbody').innerHTML=`
+    <div class="bigbp" style="margin-bottom:8px">
+      <span class="n">${r.sys}</span><span class="sl">/</span><span class="n">${r.dia}</span>
+      <span class="u">mmHg</span>
+      <span class="badge ${st.cls}" style="margin-left:8px">${st.label}</span>
+    </div>
+    <div class="bp-meta">
+      ${r.pulse?`<span class="bp-meta-item pulse-badge">♥ ${r.pulse} bpm</span>`:''}
+      <span class="bp-meta-item">${PL[r.period]||''}</span>
+      <span class="bp-meta-item">${r.date}</span>
+      ${r.note?`<span class="bp-meta-item" style="font-style:italic">${r.note}</span>`:''}
+    </div>`;
+  renderTrendSummary(mine);
+}
+
+// ============================================================
+// TREND SUMMARY (after save)
+// ============================================================
+function renderTrendSummary(mine){
+  const box = document.getElementById('trendsummary');
+  if(mine.length < 2){box.style.display='none';return}
+
+  const now = Date.now();
+  const cut7 = now - 7*86400000;
+  const cut14 = now - 14*86400000;
+
+  // this week vs last week
+  const thisWeek = mine.filter(r=>r.ts >= cut7);
+  const lastWeek = mine.filter(r=>r.ts >= cut14 && r.ts < cut7);
+
+  if(!thisWeek.length){box.style.display='none';return}
+
+  const avgSys = arr=>Math.round(arr.reduce((a,b)=>a+b.sys,0)/arr.length);
+  const avgDia = arr=>Math.round(arr.reduce((a,b)=>a+b.dia,0)/arr.length);
+  const avgPls = arr=>{const v=arr.filter(r=>r.pulse);return v.length?Math.round(v.reduce((a,b)=>a+b.pulse,0)/v.length):null};
+
+  const curSys=avgSys(thisWeek), curDia=avgDia(thisWeek), curPls=avgPls(thisWeek);
+
+  // arrow + color helper (for BP: lower = better)
+  function bpArrow(cur, prev, lowerIsBetter=true){
+    if(prev===null||isNaN(prev)) return null;
+    const diff = cur - prev;
+    if(Math.abs(diff)<2) return {icon:'→',cls:'ts-eq',diff:0,txt:'คงที่'};
+    if(lowerIsBetter){
+      return diff<0
+        ? {icon:'↓',cls:'ts-dn',diff,txt:`ดีขึ้น ${Math.abs(diff)}`}
+        : {icon:'↑',cls:'ts-up',diff,txt:`สูงขึ้น ${diff}`};
+    } else {
+      return diff>0
+        ? {icon:'↑',cls:'ts-dn',diff,txt:`ดีขึ้น ${diff}`}
+        : {icon:'↓',cls:'ts-up',diff,txt:`ต่ำลง ${Math.abs(diff)}`};
+    }
+  }
+
+  const hasPrev = lastWeek.length > 0;
+  const prevSys = hasPrev?avgSys(lastWeek):null;
+  const prevDia = hasPrev?avgDia(lastWeek):null;
+  const prevPls = hasPrev?avgPls(lastWeek):null;
+
+  const arSys = bpArrow(curSys, prevSys);
+  const arDia = bpArrow(curDia, prevDia);
+  const arPls = curPls ? bpArrow(curPls, prevPls, false) : null;
+
+  // Overall verdict
+  function verdict(){
+    if(!hasPrev) return {icon:'📊',bg:'var(--primary-soft)',color:'var(--primary)',title:'เริ่มต้นสัปดาห์แรก',sub:`เฉลี่ยสัปดาห์นี้ ${curSys}/${curDia} mmHg — บันทึกต่อเนื่องเพื่อดูแนวโน้ม`};
+    const sysOk = arSys && arSys.diff <= 0;
+    const diaOk = arDia && arDia.diff <= 0;
+    const both = sysOk && diaOk;
+    const neither = !sysOk && !diaOk;
+    if(both)   return {icon:'🎉',bg:'#D1FAE5',color:'#065F46',title:'ดีขึ้นจากสัปดาห์ที่แล้ว!',sub:`ค่าบนลด ${Math.abs(arSys.diff)}, ค่าล่างลด ${Math.abs(arDia.diff)}`};
+    if(neither)return {icon:'⚠️',bg:'#FEE2E2',color:'#7F1D1D',title:'สูงกว่าสัปดาห์ที่แล้ว',sub:`ค่าบนสูงขึ้น ${arSys.diff}, ค่าล่างสูงขึ้น ${arDia.diff} — ควรติดตามอย่างใกล้ชิด`};
+    return {icon:'📈',bg:'#FEF3C7',color:'#92400E',title:'ผสมกัน — บางค่าดีขึ้น',sub:'ค่าบน/ล่างเปลี่ยนทิศทางต่างกัน ควรดูกราฟประกอบ'};
+  }
+  const v = verdict();
+
+  function row(label, cur, unit, ar){
+    if(!ar) return `<div class="tsrow">
+      <span class="ts-label">${label}</span>
+      <span class="ts-val" style="color:var(--muted)">${cur} ${unit} <span style="font-size:11px;font-family:Sarabun">ไม่มีข้อมูลสัปดาห์ก่อน</span></span>
+    </div>`;
+    return `<div class="tsrow">
+      <span class="ts-label">${label}</span>
+      <span class="ts-val">
+        <span>${cur} ${unit}</span>
+        <span class="ts-arrow ${ar.cls}">${ar.icon}</span>
+        <span class="badge ${ar.cls==='ts-dn'?'ok':ar.cls==='ts-up'?'h2':'lo'}" style="font-family:Sarabun;font-size:11px">${ar.txt}</span>
+      </span>
+    </div>`;
+  }
+
+  box.style.display='block';
+  box.innerHTML=`
+    <div class="ts-score" style="background:${v.bg}">
+      <span class="ts-score-icon">${v.icon}</span>
+      <div class="ts-score-text">
+        <div class="ts-score-title" style="color:${v.color}">${v.title}</div>
+        <div class="ts-score-sub">${v.sub}</div>
+      </div>
+    </div>
+    <div class="ts-header">เปรียบเทียบค่าเฉลี่ย 7 วัน</div>
+    ${row('ค่าบน (Systolic)', curSys, 'mmHg', arSys)}
+    ${row('ค่าล่าง (Diastolic)', curDia, 'mmHg', arDia)}
+    ${curPls ? row('ชีพจร', curPls, 'bpm', arPls) : ''}
+    <p style="font-size:11px;color:var(--light);margin-top:10px;text-align:right">สัปดาห์นี้ ${thisWeek.length} ครั้ง${hasPrev?' · สัปดาห์ก่อน '+lastWeek.length+' ครั้ง':''}</p>
+  `;
+}
+
+// ============================================================
+// TREND
+// ============================================================
+function filterDays(days, data){
+  if(days==='all')return data;
+  const cut=Date.now()-parseInt(days)*86400000;
+  return data.filter(r=>r.ts>=cut);
+}
+
+function renderTrend(){
+  const mine=myRecs();
+  const data=filterDays(document.getElementById('tdays').value, mine);
+  const canvas=document.getElementById('tChart');
+  const empty=document.getElementById('tempty');
+  if(data.length<2){empty.style.display='block';canvas.style.display='none';renderStats([]);return}
+  empty.style.display='none';canvas.style.display='block';
+  if(tC)tC.destroy();
+  tC=new Chart(canvas,{type:'line',data:{
+    labels:data.map(r=>{const d=new Date(r.ts);return`${d.getDate()}/${d.getMonth()+1}`}),
+    datasets:[
+      {label:'ค่าบน',data:data.map(r=>r.sys),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.07)',borderWidth:2,tension:.35,pointRadius:3,pointBackgroundColor:'#2563EB'},
+      {label:'ค่าล่าง',data:data.map(r=>r.dia),borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,.05)',borderWidth:2,tension:.35,pointRadius:3,pointBackgroundColor:'#DC2626'},
+      {label:'ชีพจร',data:data.map(r=>r.pulse),borderColor:'#10B981',backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],tension:.35,pointRadius:3,pointBackgroundColor:'#10B981'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          display:true,
+          position:'bottom',
+          labels:{font:{size:11,family:'Sarabun'},padding:16,usePointStyle:true,pointStyleWidth:8}
+        },
+        tooltip:{
+          callbacks:{
+            title: ctx => {
+              const r = data[ctx[0].dataIndex];
+              return `${r.date} · ${PL[r.period]||''}`;
+            },
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          },
+          titleFont:{family:'Sarabun'},
+          bodyFont:{family:'Sarabun'}
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:10,family:'Sarabun'},maxRotation:45,autoSkip:true,maxTicksLimit:10}},
+        y:{min:40,grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:10,family:'Sarabun'}}}
+      }}
+  });
+  renderStats(data);
+}
+
+function renderStats(data){
+  const g=document.getElementById('statgrid');
+  if(!data.length){g.innerHTML='';return}
+  const sys=data.map(r=>r.sys),dia=data.map(r=>r.dia);
+  g.innerHTML=[
+    {l:'ค่าบนเฉลี่ย',v:avg(sys),u:'Systolic avg'},
+    {l:'ค่าล่างเฉลี่ย',v:avg(dia),u:'Diastolic avg'},
+    {l:'สูงสุด / ต่ำสุด',v:`${Math.max(...sys)}/${Math.min(...sys)}`,u:'Systolic range'},
+    {l:'จำนวนครั้ง',v:data.length,u:'รายการทั้งหมด'}
+  ].map(c=>`<div class="statcard"><div class="slbl">${c.l}</div><div class="v">${c.v}</div><div class="u">${c.u}</div></div>`).join('');
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+function renderHist(){
+  const list=document.getElementById('histlist');
+  const empty=document.getElementById('histempty');
+  const filterVal=document.getElementById('hist-filter').value;
+  const source = filterVal==='me' ? myRecs() : allRecs;
+  const data=[...source].reverse();
+  if(!data.length){empty.style.display='block';list.innerHTML='';return}
+  empty.style.display='none';
+  list.innerHTML=data.map(r=>{
+    const st=bpSt(r.sys,r.dia);
+    const isOwn = r.owner===me;
+    const ownerColor = colorFor(r.owner||'?');
+    return`<div class="hrow">
+      <div class="hrow-left">
+        <div class="hrow-vals">
+          <span class="hrow-bp">${r.sys}/${r.dia}</span>
+          <span class="badge ${st.cls}">${st.label}</span>
+          <span class="member-tag">
+            <span class="member-av" style="background:${ownerColor}">${initials(r.owner||'?')}</span>
+            ${r.owner||'ไม่ทราบ'}
+          </span>
+        </div>
+        <div class="hrow-meta">${r.date} · ${PL[r.period]||''}${r.pulse?' · ♥ '+r.pulse+' bpm':''}${r.note?' · <em>'+r.note+'</em>':''}</div>
+      </div>
+      ${isOwn?`<button class="delbtn" onclick="delRec('${r._key}')" title="ลบ">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function delRec(key){
+  if(!confirm('ลบรายการนี้?'))return;
+  if(FB_OK && !key.startsWith('local_')){
+    await fbDelete(`records/${key}`);
+    await loadAllRecs();
+  } else {
+    allRecs = allRecs.filter(r=>r._key!==key);
+    renderHist();renderLatest();
+  }
+}
+
+// ============================================================
+// TEAM
+// ============================================================
+async function renderTeam(){
+  const list=document.getElementById('teamlist');
+  list.innerHTML='<div class="empty"><span class="ico">⏳</span>กำลังโหลด...</div>';
+
+  // Group records by member
+  const memberMap = {};
+  for(const r of allRecs){
+    if(!memberMap[r.owner]) memberMap[r.owner]={name:r.owner,recs:[]};
+    memberMap[r.owner].recs.push(r);
+  }
+
+  const members = Object.values(memberMap);
+  if(!members.length){list.innerHTML='<div class="empty"><span class="ico">👥</span>ยังไม่มีสมาชิก</div>';return}
+
+  list.innerHTML = members.map(m=>{
+    const last = m.recs[m.recs.length-1];
+    const st = bpSt(last.sys,last.dia);
+    const c = colorFor(m.name);
+    return`<div class="team-row">
+      <div class="team-av-lg" style="background:${c}">${initials(m.name)}</div>
+      <div class="team-info">
+        <div class="team-name">${m.name}${m.name===me?' <span style="font-size:11px;font-weight:400;color:var(--muted)">(คุณ)</span>':''}</div>
+        <div class="team-bp">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;letter-spacing:-.5px">${last.sys}/${last.dia}</span>
+          <span class="badge ${st.cls}">${st.label}</span>
+          <span style="font-size:11px;color:var(--light)">${last.date}</span>
+        </div>
+        <div class="team-count">${m.recs.length} รายการ</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// AUTO LOGIN
+// ============================================================
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nameinp').addEventListener('keydown',e=>{if(e.key==='Enter')startApp()});
+  const last=localStorage.getItem('bp_lastuser');
+  if(last){document.getElementById('nameinp').value=last;startApp()}
+});
+</script>
+</body>
+</html>
